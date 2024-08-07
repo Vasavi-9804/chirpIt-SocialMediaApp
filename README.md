@@ -50,7 +50,7 @@ chirpIt is a backend application built using Node.js and Express. It supports us
    "scripts": {
     "start": "nodemon  server.js",
     "start-auth": "nodemon  authServer.js"
-  }
+    }
 5. Start the sever:
    ```sh
     node server.js
