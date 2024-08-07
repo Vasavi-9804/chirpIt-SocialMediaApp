@@ -1,12 +1,15 @@
 const mongoose =require("mongoose");
 const commentSchema = new mongoose.Schema(
     {   
-        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-        comment: { type: String, required: true },
-        likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+        author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        comment: { type: String, required: true , maxlength: 50},
+        numLikes : {type:Number,default:0},
+        likes :[{
+            type: mongoose.Schema.Types.ObjectId, ref: 'User',
+        }],
         replies: [{
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Comment'
+            ref: 'Reply'
         }],
         post: { type: mongoose.Schema.Types.ObjectId, ref: 'Post', required: true }
     
@@ -15,4 +18,16 @@ const commentSchema = new mongoose.Schema(
 
 const Comment = mongoose.model('Comment', commentSchema);
 
-module.exports = { Comment };
+const replySchema = new mongoose.Schema(
+    {
+        author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        reply: { type: String, required: true },
+        numLikes : {type:Number,default:0},
+        likes :[{
+            type: mongoose.Schema.Types.ObjectId, ref: 'User',
+        }],
+        comment :{type: mongoose.Schema.Types.ObjectId, ref:'Comment', required : true, maxlength: 50}
+    }
+)
+const Reply = mongoose.model('Reply',replySchema);
+module.exports = { Comment,Reply };

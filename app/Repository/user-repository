@@ -1,0 +1,134 @@
+const {User} = require("../models/user")
+
+const editProfile = async (req, res, next) => {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+    if (userId != user._id) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+    const { username, name, bio, Gender } = req.body;
+    try {
+      if (username) user.username = username;
+      if (name) user.name = name;
+      if (bio) user.bio = bio;
+      if (Gender) user.Gender = Gender;
+      await user.save();
+      res.json({
+        success: true,
+        message: "Profile updated successfully",
+        user: user,
+      });
+    } catch {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ error: "Server error" });
+    }
+    next();
+  }
+
+const followUser = async (req, res, next) => {
+    try {
+      const followee_id = req.params.id;
+      const follower_id = req.user.id;
+  
+      const followee = await User.findById(followee_id);
+      const follower = await User.findById(follower_id);
+      if (!followee) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      if (!followee.followers.includes(follower_id) ) {
+        followee.followers.push(follower_id);
+        followee.followerCount += 1;
+        follower.following.push(followee_id);
+        await followee.save();
+        await follower.save();
+        return res.json({ message: "User followed successfully" });
+      }else{
+        res.status(404).json({ error: "Already following" });
+      }
+      
+    } catch(error) {
+      console.error("Error following the profile:", error);
+      res.status(500).json({ error: "Server error" });
+    }
+    next();
+  }
+
+  const unfollowUser =  async (req, res) => {
+    try {
+      const followee_id = req.params.id;
+      const follower_id = req.user.id;
+  
+      const followee = await User.findById(followee_id);
+      const follower = await User.findById(follower_id);
+  
+      if (!followee) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      if (followee.followers.includes(follower_id)) {
+        followee.followers = followee.followers.filter(
+          (id) => id.toString() !== follower_id
+        );
+        followee.followerCount -= 1;
+      }
+      if (follower.following.includes(followee_id)) {
+        follower.following = follower.following.filter(
+          (id) => id.toString() !== followee_id
+        );
+      }
+  
+      await followee.save();
+      await follower.save();
+  
+      return res.json({ message: "User unfollowed successfully" });
+    } catch (error) {
+      console.error("Error unfollowing the profile:", error);
+      return res.status(500).json({ error: "Server error" });
+    }
+  };
+
+  const viewUserProfile = async (req, res, next) => {
+    try {
+      const followee_id = req.params.id;
+      const follower_id = req.user.id;
+
+      const followee = await User.findById(followee_id);
+     
+      const follower = await User.findById(follower_id);
+      if (!followee) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      if (follower.following.includes(followee_id) ) {
+        res.json({
+          success: true,
+          message: "Profile found successfully",
+          user: {
+            name: followee.name,
+            bio: followee.bio,
+            Gender: followee.Gender,
+            followerCount: followee.followerCount,
+            posts: followee.posts,
+          },
+        });
+      }else if(followee_id===follower_id){
+        res.json({
+          success: true,
+          message: "Profile found successfully",
+          user: followee
+        });
+      }
+      else{
+        return res.status(403).json({ error: "you are not a follower of the user" });
+      }
+    } catch(error) {
+      console.error("Error viewing the profile:", error);
+      return res.status(500).json({ error: "Server error" });
+    }
+  }
+  module.exports ={
+        userRepository :{
+            editProfile,
+            followUser,
+            unfollowUser,
+            viewUserProfile
+        }
+  };

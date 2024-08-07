@@ -1,0 +1,216 @@
+const { Comment, Reply } = require("../models/comment");
+const { Post } = require("../models/post");
+const { User } = require("../models/user");
+
+const showComments = async (req, res, next) => {
+    try {
+      const id_post = req.params.id;
+      const user = req.user;
+      const post = await Post.findById(id_post).populate("author");
+  
+      if (!post) {
+        return res.status(404).json({
+          error: "Cannot find the post",
+        });
+      }
+  
+      const post_author_id = post.author._id;  // Access the author's ObjectId
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+  
+      const isFollowing = user.following.includes(post_author_id.toString());
+      const isAuthor = user._id.equals(post_author_id);
+  
+      if (isFollowing || isAuthor) {
+        const comments = await Comment.find({ post: id_post })
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .populate("replies")
+          .exec();
+  
+        const totalComments = await Comment.countDocuments({ post: id_post });
+        return res.json({
+          comments,
+          currentPage: page,
+          totalPages: Math.ceil(totalComments / limit),
+          totalComments,
+        });
+      } else {
+        return res.status(403).json({
+          error: "Access denied",
+        });
+      }
+    } catch (error) {
+      return res.status(500).json({ error: "Server error" });
+    }
+  };
+  
+ 
+  
+const replyToComment = async (req, res, next) => {
+  try{
+    const user = req.user;
+    const comment_id = req.params.id;
+    const comment =  await Comment.findById(comment_id);
+    const author_id = comment.author;
+    const data = req.body
+    if(!comment){
+        return res.status(404).json({
+            error: "Cannot find the comment",
+        });
+    }
+    if(user.following.includes(author_id)){
+        const reply = await Reply.create(data);
+        comment.replies.push(reply._id);
+        await comment.save();
+        res.status(201).json({message : "reply saved successfully!"});
+    }else{
+        return res.status(403).json({
+            error: "Access denied",
+        });
+    }
+  }catch(error){
+    console.error("Error replying to the comment:", error);
+    return res.status(500).json({ error: "Server error" });
+  }
+    
+};
+
+const likeComment = async (req,res,next) =>{
+    try{
+        const user = req.user;
+        const comment_id = req.params.id;
+        const comment =  await Comment.findById(comment_id,'author likes numLikes');
+        const author_id = comment.author;
+        if(!comment){
+            return res.status(404).json({
+                error: "Cannot find the comment",
+            });
+        }
+        if(user.following.includes(author_id)){
+            if(comment.likes.includes(user._id)){
+                return res.status(403).json({
+                    error: "Already liked !!",
+                });
+               }
+            comment.numLikes+=1;
+            await comment.save();
+            res.status(201).json({message : "like saved successfully!"});
+        }else{
+            return res.status(403).json({
+                error: "Access denied",
+            });
+         }
+
+    }catch(error){
+        console.error("Error liking to the comment:", error);
+        return res.status(500).json({ error: "Server error" });
+    }
+}
+
+const unLikeComment = async (req,res,next) =>{
+    try{
+        const user = req.user;
+        const comment_id = req.params.id;
+        const comment =  await Comment.findById(comment_id,'author likes numLikes');
+        const author_id = comment.author;
+        if(!comment){
+            return res.status(404).json({
+                error: "Cannot find the comment",
+            });
+        }
+        if(user.following.includes(author_id)){
+            if(!comment.likes.includes(user._id)){
+                return res.status(404).json({
+                    error: "cannot unlike!!",
+                });
+            }
+            comment.numLikes-=1;
+            await comment.save();
+            res.status(201).json({message : "unliked successfully!"});
+        }else{
+            return res.status(403).json({
+                error: "Access denied",
+            });
+         }
+
+    }catch(error){
+        console.error("Error unliking the comment:", error);
+        return res.status(500).json({ error: "Server error" });
+    }
+}
+const unLikeReply = async (req,res,next) =>{
+    try{
+        const user = req.user;
+        const reply_id = req.params.id;
+        const reply =  await Reply.findById(reply_id,'author likes numLikes');
+        const author_id = reply.author;
+        if(!reply){
+            return res.status(404).json({
+                error: "Cannot find the reply",
+            });
+        }
+        if(user.following.includes(author_id)){
+           if(!reply.likes.includes(user._id)){
+            return res.status(404).json({
+                error: "Cannot unlike !!",
+            });
+           }
+            reply.numLikes-=1;
+            await reply.save();
+            res.status(201).json({message : "unlike saved successfully!"});
+        }else{
+            return res.status(403).json({
+                error: "Access denied",
+            });
+         }
+
+    }catch(error){
+        return res.status(500).json({ error: "Server error" });
+    }
+}
+
+const likeReply = async (req,res,next) =>{
+    try{
+        const user = req.user;
+        const reply_id = req.params.id;
+        const reply =  await Reply.findById(reply_id,'author likes numLikes');
+        const author_id = reply.author;
+        if(!reply){
+            return res.status(404).json({
+                error: "Cannot find the reply",
+            });
+        }
+        if(user.following.includes(author_id)){
+            if(reply.likes.includes(user._id)){
+                return res.status(404).json({
+                    error: "Liked already !!",
+                });
+            }
+            reply.numLikes+=1;
+            await reply.save();
+            res.status(201).json({message : "like saved successfully!"});
+        }else{
+            return res.status(403).json({
+                error: "Access denied",
+            });
+         }
+
+    }catch(error){
+        console.error("Error liking to the reply:", error);
+        return res.status(500).json({ error: "Server error" });
+    }
+}
+
+module.exports = {
+  commentRepository: {
+    showComments,
+    replyToComment,
+    likeComment,
+    unLikeComment,
+    unLikeReply,
+    likeReply
+  },
+};
