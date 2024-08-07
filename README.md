@@ -57,5 +57,4 @@ chirpIt is a backend application built using Node.js and Express. It supports us
     node authServer.js
     npm rum start
     npm run start-auth //in seperate terminals
-
-
+6. Use postman to send requests to the server and receive responses from the server
