@@ -42,11 +42,11 @@ authRouter.post("/login", async (req, res, next) => {
     }
 
     const accessToken = generateAccessToken({ username: user.username });
-    // const rToken = jwt.sign(
-    //   { username: user.username },
-    //   process.env.REFRESH_TOKEN_SECRET
-    // );
-    // refreshToken.create({ token: rToken, author : user.username });
+    const rToken = jwt.sign(
+     { username: user.username },
+       process.env.REFRESH_TOKEN_SECRET
+    );
+    refreshToken.create({ token: rToken, author : user.username });
     res.json({ accessToken: accessToken});
   } catch (err) {
     console.error(err);
